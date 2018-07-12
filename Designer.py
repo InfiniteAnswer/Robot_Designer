@@ -8,6 +8,7 @@ import cv2
 import sys
 import numpy as np
 import pickle
+import random
 from matplotlib import pyplot as plt
 
 
@@ -88,6 +89,8 @@ class Win():
 
         self.x_px = PixelControl(self.menu_panel, y_offset + 4*y_spacing, "Pixelate X")
         self.y_px = PixelControl(self.menu_panel, y_offset + 5*y_spacing, "Pixelate Y")
+        self.x_px.value_val.set(5)
+        self.y_px.value_val.set(5)
 
         # Add the controls for mapping grays to tile colours
         self.mapping_val = tk.IntVar()
@@ -129,6 +132,7 @@ class Win():
         self.image_np_modified = self.image_np_original
         self.image_np_modified_unexpanded = self.image_np_modified
         self.image_np_modified_BGR = np.stack((self.image_np_modified, self.image_np_modified, self.image_np_modified))
+        self.image_to_save = self.image_np_modified_unexpanded
 
         # plt.ion()
         # self.fig = plt.figure()
@@ -164,6 +168,9 @@ class Win():
         self.configuration_load.place(x=700, y=678)
         self.configuration_save = tk.Button(self.image_panel, text="Save", command=self.save_configuration)
         self.configuration_save.place(x=742, y=678)
+
+        # Logic maps for mpping palettes
+        self.logic_maps = list()
 
         root.bind('<Return>', self.update_event_handler)
         root.bind('<Tab>', self.update_event_handler)
@@ -283,7 +290,40 @@ class Win():
             self.target_width = int(numpy_image.shape[0]/890*numpy_image.shape[1])
         ratio = self.target_width / numpy_image.shape[1]
         target_dim = (int(self.target_width), int(numpy_image.shape[0] * ratio))
-        return cv2.resize(numpy_image, target_dim, interpolation=cv2.INTER_AREA)
+        # return cv2.resize(numpy_image, target_dim, interpolation=cv2.INTER_AREA)
+        temp_numpy_image = cv2.resize(numpy_image, target_dim, interpolation=cv2.INTER_AREA)
+        resized_image = self.resize_image_to_nearest_full_tile(temp_numpy_image)
+        self.target_width = resized_image.shape[1]
+        return resized_image
+
+
+    def resize_image_to_nearest_full_tile(self, np_image):
+        _MAX_WIDTH = 600 # 790
+        _MAX_HEIGHT = 600 # 890
+
+        # Decide if width or height drives rescaling
+        current_width = np_image.shape[1]
+        current_height = np_image.shape[0]
+        if (_MAX_WIDTH/current_width * current_height) > _MAX_HEIGHT:
+            driver = "HEIGHT"
+            scale_factor = _MAX_HEIGHT/current_height
+        else:
+            driver = "WIDTH"
+            scale_factor = _MAX_WIDTH/current_width
+
+        new_size = (int(current_width*scale_factor), int(current_height*scale_factor))
+        np_image = cv2.resize(np_image, new_size, interpolation=cv2.INTER_AREA)
+        current_width = np_image.shape[1]
+        current_height = np_image.shape[0]
+
+        x_tiles = int(self.x_px.value_val.get())
+        y_tiles = int(self.y_px.value_val.get())
+        scale_x = int(current_width / x_tiles)
+        scale_y = int(current_height / y_tiles)
+        x_size = x_tiles * scale_x
+        y_size = y_tiles * scale_y
+        self.target_width = x_size
+        return cv2.resize(np_image, (x_size, y_size), interpolation=cv2.INTER_AREA)
 
     def modify_con_bri(self):
         # print('Entering modify con bri loop')
@@ -314,6 +354,7 @@ class Win():
             target_dim = (int(self.target_width), int(self.image_np_modified.shape[0] * ratio))
             dim_original = (self.image_np_modified.shape[1], self.image_np_modified.shape[0])
             dim = (int(self.x_px.value_val.get()), int(self.y_px.value_val.get()))
+            print("pre-pre resized image: ", self.image_np_modified.shape)
             self.image_np_modified = cv2.resize(self.image_np_modified, dim, interpolation=cv2.INTER_AREA)
             # print('pixelate image')
             # print(self.image_np_modified)
@@ -330,6 +371,7 @@ class Win():
                             break
                 image_to_save.append(column_to_add)
             print('list that is saved:', image_to_save)
+            self.image_to_save = np.array(image_to_save)
             filename = "C:\\Users\\v_sam\\Desktop\list_save_test.pkl"
             with open(filename, 'wb') as f:
                 pickle.dump(image_to_save, f)
@@ -337,7 +379,12 @@ class Win():
             # print('dimensions')
             # print(dim_original)
             # print(target_dim)
-            self.image_np_modified = cv2.resize(self.image_np_modified_unexpanded, target_dim, interpolation=cv2.INTER_NEAREST)
+            self.image_np_modified = cv2.resize(self.image_np_modified_unexpanded, dim_original, interpolation=cv2.INTER_NEAREST)
+            print("pre-resized image: ", self.image_np_modified.shape)
+            self.image_np_modified = self.resize_image_to_nearest_full_tile(self.image_np_modified)
+            self.image_np_modified_BGR = np.stack(
+                (self.image_np_modified, self.image_np_modified, self.image_np_modified))
+            print("resized image: ", self.image_np_modified.shape)
 
     def delete_grid(self):
         if len(self.lines) > 0:
@@ -443,6 +490,7 @@ class Win():
                     palette.update({c:1})
 
         print('pallette:',palette)
+        # self.logic_maps = logic_map
 
     def update_color_pickers(self):
         for x, i in enumerate(self.mapping_object_list):
@@ -463,6 +511,86 @@ class Win():
             self.imageTk = ImageTk.PhotoImage(Image.fromarray(self.image_np_modified))
             self.image_panel.itemconfigure(self.imge, image=self.imageTk)
 
+    def map_real_textures(self):
+
+        scale_size = self.image_np_modified.shape
+        tile_size_x = 1.0 * scale_size[1] / int(self.x_px.value_val.get())
+        tile_size_y = 1.0 * scale_size[0] / int(self.y_px.value_val.get())
+
+        # texture_map = np.arange(192).reshape((3,8,8))
+        texture_map = cv2.imread("c:/users/v_sam/desktop/grain1.jpg", cv2.IMREAD_COLOR)
+        # cv2.imshow('image', texture_map)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+
+        texture_list = []
+        woods = ["buche", "fichte", "kiefer", "pappel", "pappel"]
+        for wood in woods:
+            row_entry = []
+            for i in range(5):
+                filename = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + ".jpg"
+                filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
+                wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
+                wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
+                row_entry.append(wood_texture)
+                row_entry.append(wood_texture_b)
+            texture_list.append(row_entry)
+
+        # texture_list = [[texture_map, texture_map],
+        #                 [texture_map, texture_map],
+        #                 [texture_map, texture_map],
+        #                 [texture_map, texture_map],
+        #                 [texture_map, texture_map]]
+        # print("texture map")
+        # print(texture_map)
+        # print("texture list")
+        # print(texture_list[0])
+
+        resized_texture_list_row = []
+        for r in texture_list:
+            resized_texture_list_col = []
+            for c in r:
+                # resized_texture_list_entry = []
+                resized_entry = cv2.resize(c, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST)
+                # for d in resized_entry:
+                #     # resized_entry = cv2.resize(d, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST)
+                #     resized_texture_list_entry.append(resized_entry)
+                #     # print("original size: ", d.shape)
+                #     # print("new size: ", cv2.resize(d, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST).shape)
+                resized_texture_list_col.append(resized_entry)
+            resized_texture_list_row.append(resized_texture_list_col)
+        texture_list = resized_texture_list_row
+        # for x, i in enumerate(self.mapping_values):
+        #     if x == 0:
+        #         logic_map.append(self.image_np_modified_unexpanded <= self.mapping_values[0])
+        #     else:
+        #         logic_map.append(np.logical_and(self.image_np_modified_unexpanded > self.mapping_values[x - 1],
+        #                                         self.image_np_modified_unexpanded <= self.mapping_values[x]))
+        # logic_map.append(self.image_np_modified_unexpanded > self.mapping_values[-1])
+
+        for y_px, r in enumerate(self.image_np_modified_unexpanded):
+            for x_px, c in enumerate(r):
+                start_x = int(x_px * tile_size_x)
+                start_y = int(y_px * tile_size_y)
+                end_x = int(start_x + tile_size_x)
+                end_y = int(start_y + tile_size_y)
+                # print("cell size: ", tile_size_x, ",", tile_size_y)
+                # print("A", self.image_np_modified_BGR[0])
+                # print("B", self.image_np_modified_BGR[0][start_x:end_x, start_y:end_y])
+                # print("C", texture_list[0][0])
+                # print("D", texture_list[0,0][0])
+                # print(x_px, ",", y_px)
+
+                # self.image_np_modified_BGR[0][start_x:end_x, start_y:end_y] = texture_list[0][0][0]
+                selected_colour = self.image_to_save[y_px, x_px]
+                print("selected palette colour: ", selected_colour)
+                palette_selection = random.choice(texture_list[selected_colour])
+                # substitute = texture_list[0][0][0]
+                self.image_np_modified_BGR[0][start_y:end_y, start_x:end_x] = palette_selection[:,:,2]
+                self.image_np_modified_BGR[1][start_y:end_y, start_x:end_x] = palette_selection[:,:,1]
+                self.image_np_modified_BGR[2][start_y:end_y, start_x:end_x] = palette_selection[:,:,0]
+
+
     def update_all(self):
         print('entering update all loop')
         self.image_np_modified = self.load_master()
@@ -477,6 +605,9 @@ class Win():
         # If the mapping button is on, modify the mapping
         self.mapping_imageX()
         self.get_palette()
+
+        self.map_real_textures()
+
         # Update the image
         self.image_update()
         self.draw_grid()
