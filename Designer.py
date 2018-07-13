@@ -172,11 +172,14 @@ class Win():
         # Logic maps for mpping palettes
         self.logic_maps = list()
 
+        self.texture_list = self.set_up_real_textures()
+
         root.bind('<Return>', self.update_event_handler)
         root.bind('<Tab>', self.update_event_handler)
         root.bind("<ButtonRelease-1>", self.update_event_handler)
 
     def update_event_handler(self, event):
+        self.update_all()
         self.update_all()
 
     def serialise_parameters(self):
@@ -463,6 +466,17 @@ class Win():
                     # print(self.image_np_modified_BGR)
                     # print('-----------------------------')
 
+    def random_rotate(self, img):
+        # rotations = random.randint(0,3)
+        # rotation_angle = rotations * 90
+        # height, width = img.shape[:2]
+        # center = (int(width/2), int(height/2))
+        # rotation_matrix = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
+        # rotated = cv2.warpAffine(img, rotation_matrix, center)
+        transposed_image = cv2.transpose(img)
+        rotated_image = cv2.flip(transposed_image, 1)
+        return rotated_image
+
     def get_palette(self):
         palette = dict()
         if self.pixelate_val.get() == 1:
@@ -511,6 +525,23 @@ class Win():
             self.imageTk = ImageTk.PhotoImage(Image.fromarray(self.image_np_modified))
             self.image_panel.itemconfigure(self.imge, image=self.imageTk)
 
+    def set_up_real_textures(self):
+        texture_list = []
+        woods = ["nuss", "buche", "fichte", "kiefer", "pappel"]
+        for wood in woods:
+            row_entry = []
+            for i in range(5):
+                filename = "c:/users/v_sam/desktop/tiles_new/" + wood + str(i+1) + ".jpg"
+                # filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
+                wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
+                # wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
+                for rotations in range(4):
+                    row_entry.append(self.random_rotate(wood_texture))
+                # row_entry.append(wood_texture_b)
+            texture_list.append(row_entry)
+        return texture_list
+
+
     def map_real_textures(self):
 
         scale_size = self.image_np_modified.shape
@@ -523,18 +554,19 @@ class Win():
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
 
-        texture_list = []
-        woods = ["buche", "fichte", "kiefer", "pappel", "pappel"]
-        for wood in woods:
-            row_entry = []
-            for i in range(5):
-                filename = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + ".jpg"
-                filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
-                wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
-                wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
-                row_entry.append(wood_texture)
-                row_entry.append(wood_texture_b)
-            texture_list.append(row_entry)
+        # texture_list = []
+        # woods = ["nuss", "buche", "fichte", "kiefer", "pappel"]
+        # for wood in woods:
+        #     row_entry = []
+        #     for i in range(5):
+        #         filename = "c:/users/v_sam/desktop/tiles_new/" + wood + str(i+1) + ".jpg"
+        #         # filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
+        #         wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
+        #         # wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
+        #         for rotations in range(4):
+        #             row_entry.append(self.random_rotate(wood_texture))
+        #         # row_entry.append(wood_texture_b)
+        #     texture_list.append(row_entry)
 
         # texture_list = [[texture_map, texture_map],
         #                 [texture_map, texture_map],
@@ -547,7 +579,7 @@ class Win():
         # print(texture_list[0])
 
         resized_texture_list_row = []
-        for r in texture_list:
+        for r in self.texture_list:
             resized_texture_list_col = []
             for c in r:
                 # resized_texture_list_entry = []
@@ -594,12 +626,13 @@ class Win():
     def update_all(self):
         print('entering update all loop')
         self.image_np_modified = self.load_master()
-        # Update mapping values
-        self.update_mapping_values()
+
         # If the brightness and contrast checkbutton is on, then modify the contrast and brightness
         self.modify_con_bri()
         # If the pixelate button is on, then modify the resolution
         self.pixelate_image()
+        # Update mapping values
+        self.update_mapping_values()
         # Update color of all color picker buttons
         self.update_color_pickers()
         # If the mapping button is on, modify the mapping
