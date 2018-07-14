@@ -98,6 +98,11 @@ class Win():
                                       variable=self.mapping_val)
         self.mapping.place(x=10, y=y_offset + 7*y_spacing)
 
+        self.mapping_val_wood = tk.IntVar()
+        self.mapping_wood = tk.Checkbutton(self.menu_panel, bg=background_colour, text = "Wood",
+                                      variable=self.mapping_val_wood)
+        self.mapping_wood.place(x=100, y=y_offset + 7*y_spacing)
+
         # Option to set number of values
         self.mapping_values_length = tk.StringVar()
         self.mapping_values_length_old = tk.StringVar()
@@ -639,7 +644,8 @@ class Win():
         self.mapping_imageX()
         self.get_palette()
 
-        self.map_real_textures()
+        if self.mapping_val_wood.get() == 1 and self.pixelate_val.get() == 1:
+            self.map_real_textures()
 
         # Update the image
         self.image_update()
