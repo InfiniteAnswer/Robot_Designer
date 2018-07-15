@@ -65,6 +65,12 @@ class Win():
         y_spacing = 40
         y_offset = 80
         win.geometry('1065x760+50+10')
+
+        self.path_to_tiles = "C:/Users/v_sam/Documents/PxlRT/TileImages/tiles_new/"
+        self.path_to_dump = "C:/Users/v_sam/Documents/PxlRT/FilesToPrint/"
+        self.path_to_wall_profiles = "C:/Users/v_sam/Documents/PxlRT/WallProfiles/"
+        self.path_to_images = "C:/Users/v_sam/Documents/PxlRT/PhotoImages/"
+
         self.lines = []
         # Setup 2 panels in the window and open a starting image
         self.image_panel = tk.Canvas(win, width=800, height=750, cursor="cross", bg=background_colour)
@@ -211,7 +217,7 @@ class Win():
         return data_list
 
     def open_browser(self):
-        self.image_filename_val.set(filedialog.askopenfilename(parent=root))
+        self.image_filename_val.set(filedialog.askopenfilename(parent=root, initialdir=self.path_to_images))
         self.image_np_original = self.load_master()
         self.image_np_modified = self.image_np_original
         self.image_np_modified_unexpanded = self.image_np_modified
@@ -219,7 +225,7 @@ class Win():
         # print('new image loaded')
 
     def open_configuration_browser(self):
-        self.configuration_filename_val.set(filedialog.askopenfilename(parent=root))
+        self.configuration_filename_val.set(filedialog.askopenfilename(parent=root, initialdir=self.path_to_wall_profiles))
         # print('new configuration loaded')
 
     def load_configuration(self):
@@ -260,7 +266,7 @@ class Win():
             self.mapping_object_list[i].button_color_dec = list_colors_dec[i]
 
     def save_configuration(self):
-        self.configuration_filename_val.set(filedialog.asksaveasfilename(parent=root))
+        self.configuration_filename_val.set(filedialog.asksaveasfilename(parent=self.path_to_wall_profiles))
         serialised_parameters = self.serialise_parameters()
         filename = self.configuration_filename_val.get()
         with open(filename, 'wb') as f:
@@ -303,7 +309,6 @@ class Win():
         resized_image = self.resize_image_to_nearest_full_tile(temp_numpy_image)
         self.target_width = resized_image.shape[1]
         return resized_image
-
 
     def resize_image_to_nearest_full_tile(self, np_image):
         _MAX_WIDTH = 600 # 790
@@ -380,7 +385,7 @@ class Win():
                 image_to_save.append(column_to_add)
             print('list that is saved:', image_to_save)
             self.image_to_save = np.array(image_to_save)
-            filename = "C:\\Users\\v_sam\\Desktop\list_save_test.pkl"
+            filename = self.path_to_dump + "list_save_test.pkl"
             with open(filename, 'wb') as f:
                 pickle.dump(image_to_save, f)
 
@@ -536,7 +541,7 @@ class Win():
         for wood in woods:
             row_entry = []
             for i in range(5):
-                filename = "c:/users/v_sam/desktop/tiles_new/" + wood + str(i+1) + ".jpg"
+                filename = self.path_to_tiles + wood + str(i+1) + ".jpg"
                 # filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
                 wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
                 # wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
@@ -546,7 +551,6 @@ class Win():
             texture_list.append(row_entry)
         return texture_list
 
-
     def map_real_textures(self):
 
         scale_size = self.image_np_modified.shape
@@ -554,7 +558,7 @@ class Win():
         tile_size_y = 1.0 * scale_size[0] / int(self.y_px.value_val.get())
 
         # texture_map = np.arange(192).reshape((3,8,8))
-        texture_map = cv2.imread("c:/users/v_sam/desktop/grain1.jpg", cv2.IMREAD_COLOR)
+        # texture_map = cv2.imread("c:/users/v_sam/desktop/grain1.jpg", cv2.IMREAD_COLOR)
         # cv2.imshow('image', texture_map)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
@@ -626,7 +630,6 @@ class Win():
                 self.image_np_modified_BGR[0][start_y:end_y, start_x:end_x] = palette_selection[:,:,2]
                 self.image_np_modified_BGR[1][start_y:end_y, start_x:end_x] = palette_selection[:,:,1]
                 self.image_np_modified_BGR[2][start_y:end_y, start_x:end_x] = palette_selection[:,:,0]
-
 
     def update_all(self):
         print('entering update all loop')
