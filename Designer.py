@@ -9,6 +9,7 @@ import sys
 import numpy as np
 import pickle
 import random
+import time
 from matplotlib import pyplot as plt
 
 
@@ -58,7 +59,6 @@ class MappingX():
         selection = askcolor()
         self.button_color_dec = selection[0]
         self.button_color = selection[1]
-        # print('New color confirmed:', self.button_color, self.button_color_dec)
 
 class Win():
     def __init__(self, win, background_colour):
@@ -132,7 +132,6 @@ class Win():
         for i,i_val in enumerate(self.mapping_values):
             new_object = MappingX(self.menu_panel, y_offset + (8+i)*y_spacing,i,i_val)
             self.mapping_object_list.append(new_object)
-        # print('mapping object list:',self.mapping_object_list)
 
         # Add controls to load an image
         self.image_filename_val = tk.StringVar()
@@ -196,7 +195,6 @@ class Win():
     def serialise_parameters(self):
         data_list = []
         data_list.append(self.mapping_values_length.get())
-        # print ('Origianl value of number of levels:',data_list[0])
         data_list.append(self.contrast_check.enable_val.get())
         data_list.append(self.contrast_check.slider.get())
         data_list.append(self.brightness_check.enable_val.get())
@@ -222,17 +220,14 @@ class Win():
         self.image_np_modified = self.image_np_original
         self.image_np_modified_unexpanded = self.image_np_modified
         self.image_np_modified_BGR = np.stack((self.image_np_modified, self.image_np_modified, self.image_np_modified))
-        # print('new image loaded')
 
     def open_configuration_browser(self):
         self.configuration_filename_val.set(filedialog.askopenfilename(parent=root, initialdir=self.path_to_wall_profiles))
-        # print('new configuration loaded')
 
     def load_configuration(self):
         filename = self.configuration_filename_val.get()
         serialised_parameters = pickle.load(open(filename, "rb"))
         self.mapping_values_length.set(serialised_parameters[0])
-        # print('saved number of levels:', serialised_parameters[0])
         self.mapping_values_length_old.set(serialised_parameters[0])
       #  self.menu_panel.itemconfigure(self.mapping_values_value, textvariable = serialised_parameters[0])
         self.contrast_check.enable_val.set(serialised_parameters[1])
@@ -251,14 +246,11 @@ class Win():
             i.slider.destroy()
             i.button.destroy()
         self.mapping_object_list = []
-        # print('New mapping values:',self.mapping_values)
         y_spacing = 40
         y_offset = 80
         for i, i_val in enumerate(self.mapping_values):
             new_object = MappingX(self.menu_panel, y_offset + (8 + i) * y_spacing, i, i_val)
             self.mapping_object_list.append(new_object)
-            # print(i)
-        # print('New mapping objects created')
         list_colors_hex = serialised_parameters[11]
         list_colors_dec = serialised_parameters[12]
         for i, val in enumerate(list_colors_hex):
@@ -291,13 +283,11 @@ class Win():
             for i, i_val in enumerate(self.mapping_values):
                 new_object = MappingX(self.menu_panel, y_offset + (8 + i) * y_spacing, i, i_val)
                 self.mapping_object_list.append(new_object)
-                # print(i)
             self.mapping_values_length_old.set(self.mapping_values_length.get())
 
     def load_master(self):
         numpy_image = cv2.imread(self.image_filename_val.get(), cv2.IMREAD_GRAYSCALE)
         temp = cv2.imread(self.image_filename_val.get())
-        # print('temp array read shape:', temp.shape)
         if numpy_image.shape[1]>numpy_image.shape[0]:
             self.target_width = 790
         else:
@@ -339,16 +329,11 @@ class Win():
         return cv2.resize(np_image, (x_size, y_size), interpolation=cv2.INTER_AREA)
 
     def modify_con_bri(self):
-        # print('Entering modify con bri loop')
         if self.contrast_check.enable_val.get()==1:
-            # print('element type')
-            # print(type(self.image_np_modified[0, 0]))
             multiply_array = np.ones_like(self.image_np_modified,dtype=np.float) * self.contrast_check.slider.get() /100 + 1
             self.image_np_modified = np.multiply(self.image_np_modified, multiply_array)
             self.image_np_modified = np.clip(self.image_np_modified,0,255)
             self.image_np_modified = self.image_np_modified.astype(np.uint8)
-            # print('element type')
-            # print(type(self.image_np_modified[0,0]))
         if self.brightness_check.enable_val.get()==1:
             self.image_np_modified = self.image_np_modified.astype(int)
             # if self.brightness_check.slider.get()<0:
@@ -361,16 +346,12 @@ class Win():
 
     def pixelate_image(self):
         if self.pixelate_val.get() == 1:
-            # print('entering pixelate')
-            # print(self.image_np_modified)
             ratio = self.target_width / self.image_np_modified.shape[1]
             target_dim = (int(self.target_width), int(self.image_np_modified.shape[0] * ratio))
             dim_original = (self.image_np_modified.shape[1], self.image_np_modified.shape[0])
             dim = (int(self.x_px.value_val.get()), int(self.y_px.value_val.get()))
             print("pre-pre resized image: ", self.image_np_modified.shape)
             self.image_np_modified = cv2.resize(self.image_np_modified, dim, interpolation=cv2.INTER_AREA)
-            # print('pixelate image')
-            # print(self.image_np_modified)
             self.image_np_modified_unexpanded = self.image_np_modified
 
             # convert image to range from 0 to tile number
@@ -383,15 +364,13 @@ class Win():
                             column_to_add.append(i)
                             break
                 image_to_save.append(column_to_add)
-            print('list that is saved:', image_to_save)
+            # print('list that is saved:', image_to_save)
             self.image_to_save = np.array(image_to_save)
             filename = self.path_to_dump + "list_save_test.pkl"
             with open(filename, 'wb') as f:
                 pickle.dump(image_to_save, f)
+            print("Updated image saved: " + str(time.asctime(time.localtime(time.time()))))
 
-            # print('dimensions')
-            # print(dim_original)
-            # print(target_dim)
             self.image_np_modified = cv2.resize(self.image_np_modified_unexpanded, dim_original, interpolation=cv2.INTER_NEAREST)
             print("pre-resized image: ", self.image_np_modified.shape)
             self.image_np_modified = self.resize_image_to_nearest_full_tile(self.image_np_modified)
@@ -433,8 +412,6 @@ class Win():
         # Update list that stores slider values (note: this is linked to sliders so cannot delete first)
         for x,i in enumerate(self.mapping_object_list):
             self.mapping_values[x] =i.slider.get()
-            # print('getting value:', i.slider.get())
-        # print(self.mapping_values)
 
         # Make sure sliders are not higher than their predecessor
         for x,i in enumerate(self.mapping_object_list):
@@ -455,34 +432,16 @@ class Win():
 
         # Remap
         if self.mapping_val.get() == 1:
-            # print('Remapping values:',self.mapping_values)
-            # print('Analysing array shapes...')
-            # print(self.image_np_modified.shape)
-            # print(self.image_np_modified_BGR[0].shape)
-            # print('-----------------------------')
             for x,i in enumerate(logic_map):
                 self.image_np_modified[i] = int(x*255/len(self.mapping_values))
-                # print(int(x*255/len(self.mapping_values)))
-                # print(i)
                 # Temp work around for not defining last color in pallete (color without slider)
-                # print('Length of logic map:', len(logic_map))
                 if x<len(logic_map)-1:
-                    # print('1st color array',self.image_np_modified_BGR[0])
                     self.image_np_modified_BGR[0][i] = int(self.mapping_object_list[x].button_color_dec[0])
                     self.image_np_modified_BGR[1][i] = int(self.mapping_object_list[x].button_color_dec[1])
                     self.image_np_modified_BGR[2][i] = int(self.mapping_object_list[x].button_color_dec[2])
                     self.image_np_modified_BGR = self.image_np_modified_BGR.astype(np.uint8)
-                    # print('new BGR color maps')
-                    # print(self.image_np_modified_BGR)
-                    # print('-----------------------------')
 
     def random_rotate(self, img):
-        # rotations = random.randint(0,3)
-        # rotation_angle = rotations * 90
-        # height, width = img.shape[:2]
-        # center = (int(width/2), int(height/2))
-        # rotation_matrix = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
-        # rotated = cv2.warpAffine(img, rotation_matrix, center)
         transposed_image = cv2.transpose(img)
         rotated_image = cv2.flip(transposed_image, 1)
         return rotated_image
@@ -501,11 +460,9 @@ class Win():
 
             # Remap
             if self.mapping_val.get() == 1:
-                # print('Remapping values:', self.mapping_values)
                 for x, i in enumerate(logic_map):
                     self.image_np_modified_unexpanded[i] = int(x * 255 / len(self.mapping_values))
 
-        # print(self.image_np_modified_unexpanded)
         for r in self.image_np_modified_unexpanded:
             for c in r:
                 if c in palette:
@@ -514,7 +471,6 @@ class Win():
                     palette.update({c:1})
 
         print('pallette:',palette)
-        # self.logic_maps = logic_map
 
     def update_color_pickers(self):
         for x, i in enumerate(self.mapping_object_list):
@@ -523,11 +479,9 @@ class Win():
     def image_update(self):
         # self.image_panel.itemconfigure(self.imge, image=ImageTk.PhotoImage(Image.fromarray(self.image_np_modified)))
         # self.imageTk=ImageTk.PhotoImage(Image.fromarray(self.image_np_modified))
-        # print('BGR image array shape:', self.image_np_modified_BGR.shape)
         image_to_show = np.dstack((self.image_np_modified_BGR[0],
                                   self.image_np_modified_BGR[1],
                                   self.image_np_modified_BGR[2]))
-        # print('modified BGR image array shape:', image_to_show.shape)
         if self.mapping_val.get() == 1:
             self.imageTk = ImageTk.PhotoImage(Image.fromarray(image_to_show))
             self.image_panel.itemconfigure(self.imge, image=self.imageTk)
@@ -557,57 +511,14 @@ class Win():
         tile_size_x = 1.0 * scale_size[1] / int(self.x_px.value_val.get())
         tile_size_y = 1.0 * scale_size[0] / int(self.y_px.value_val.get())
 
-        # texture_map = np.arange(192).reshape((3,8,8))
-        # texture_map = cv2.imread("c:/users/v_sam/desktop/grain1.jpg", cv2.IMREAD_COLOR)
-        # cv2.imshow('image', texture_map)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-
-        # texture_list = []
-        # woods = ["nuss", "buche", "fichte", "kiefer", "pappel"]
-        # for wood in woods:
-        #     row_entry = []
-        #     for i in range(5):
-        #         filename = "c:/users/v_sam/desktop/tiles_new/" + wood + str(i+1) + ".jpg"
-        #         # filename_b = "c:/users/v_sam/desktop/tiles/" + wood + str(i+1) + "b.jpg"
-        #         wood_texture = cv2.imread(filename, cv2.IMREAD_COLOR)
-        #         # wood_texture_b = cv2.imread(filename_b, cv2.IMREAD_COLOR)
-        #         for rotations in range(4):
-        #             row_entry.append(self.random_rotate(wood_texture))
-        #         # row_entry.append(wood_texture_b)
-        #     texture_list.append(row_entry)
-
-        # texture_list = [[texture_map, texture_map],
-        #                 [texture_map, texture_map],
-        #                 [texture_map, texture_map],
-        #                 [texture_map, texture_map],
-        #                 [texture_map, texture_map]]
-        # print("texture map")
-        # print(texture_map)
-        # print("texture list")
-        # print(texture_list[0])
-
         resized_texture_list_row = []
         for r in self.texture_list:
             resized_texture_list_col = []
             for c in r:
-                # resized_texture_list_entry = []
                 resized_entry = cv2.resize(c, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST)
-                # for d in resized_entry:
-                #     # resized_entry = cv2.resize(d, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST)
-                #     resized_texture_list_entry.append(resized_entry)
-                #     # print("original size: ", d.shape)
-                #     # print("new size: ", cv2.resize(d, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST).shape)
                 resized_texture_list_col.append(resized_entry)
             resized_texture_list_row.append(resized_texture_list_col)
         texture_list = resized_texture_list_row
-        # for x, i in enumerate(self.mapping_values):
-        #     if x == 0:
-        #         logic_map.append(self.image_np_modified_unexpanded <= self.mapping_values[0])
-        #     else:
-        #         logic_map.append(np.logical_and(self.image_np_modified_unexpanded > self.mapping_values[x - 1],
-        #                                         self.image_np_modified_unexpanded <= self.mapping_values[x]))
-        # logic_map.append(self.image_np_modified_unexpanded > self.mapping_values[-1])
 
         for y_px, r in enumerate(self.image_np_modified_unexpanded):
             for x_px, c in enumerate(r):
@@ -615,18 +526,10 @@ class Win():
                 start_y = int(y_px * tile_size_y)
                 end_x = int(start_x + tile_size_x)
                 end_y = int(start_y + tile_size_y)
-                # print("cell size: ", tile_size_x, ",", tile_size_y)
-                # print("A", self.image_np_modified_BGR[0])
-                # print("B", self.image_np_modified_BGR[0][start_x:end_x, start_y:end_y])
-                # print("C", texture_list[0][0])
-                # print("D", texture_list[0,0][0])
-                # print(x_px, ",", y_px)
 
-                # self.image_np_modified_BGR[0][start_x:end_x, start_y:end_y] = texture_list[0][0][0]
                 selected_colour = self.image_to_save[y_px, x_px]
-                print("selected palette colour: ", selected_colour)
+                # print("selected palette colour: ", selected_colour)
                 palette_selection = random.choice(texture_list[selected_colour])
-                # substitute = texture_list[0][0][0]
                 self.image_np_modified_BGR[0][start_y:end_y, start_x:end_x] = palette_selection[:,:,2]
                 self.image_np_modified_BGR[1][start_y:end_y, start_x:end_x] = palette_selection[:,:,1]
                 self.image_np_modified_BGR[2][start_y:end_y, start_x:end_x] = palette_selection[:,:,0]
