@@ -258,7 +258,7 @@ class Win():
             self.mapping_object_list[i].button_color_dec = list_colors_dec[i]
 
     def save_configuration(self):
-        self.configuration_filename_val.set(filedialog.asksaveasfilename(parent=self.path_to_wall_profiles))
+        self.configuration_filename_val.set(filedialog.asksaveasfilename(parent=root, initialdir=self.path_to_wall_profiles))
         serialised_parameters = self.serialise_parameters()
         filename = self.configuration_filename_val.get()
         with open(filename, 'wb') as f:
