@@ -142,7 +142,9 @@ class Win():
         self.image_np_modified = self.image_np_original
         self.image_np_modified_unexpanded = self.image_np_modified
         self.image_np_modified_BGR = np.stack((self.image_np_modified, self.image_np_modified, self.image_np_modified))
+        self.image_np_modified_BGR_full_resolution = np.stack((self.image_np_modified, self.image_np_modified, self.image_np_modified))
         self.image_to_save = self.image_np_modified_unexpanded
+
 
         # plt.ion()
         # self.fig = plt.figure()
@@ -165,6 +167,8 @@ class Win():
         self.image_browse.place(x=645, y=648)
         self.image_load = tk.Button(self.image_panel, text="Load", command=self.update_all)
         self.image_load.place(x=700, y=648)
+        self.image_save = tk.Button(self.image_panel, text="Dump", command=self.dump_map_real_textures)
+        self.image_save.place(x=742, y=648)
 
 
         # Add controls to load a configuration
@@ -520,6 +524,24 @@ class Win():
             resized_texture_list_row.append(resized_texture_list_col)
         texture_list = resized_texture_list_row
 
+        # resized_texture_list_row = []
+        # for r in self.texture_list:
+        #     resized_texture_list_col = []
+        #     for c in r:
+        #         resized_entry = cv2.resize(c, (100,100), interpolation=cv2.INTER_NEAREST)
+        #         resized_texture_list_col.append(resized_entry)
+        #     resized_texture_list_row.append(resized_texture_list_col)
+        # original_texture_list = resized_texture_list_row
+
+
+        # full_tile_size_x = np.size(original_texture_list[0][0],1)
+        # full_tile_size_y = np.size(original_texture_list[0][0],0)
+
+        # h=int(int(self.y_px.value_val.get()) * full_tile_size_y)
+        # w=int(int(self.x_px.value_val.get()) * full_tile_size_x)
+
+        # self.image_np_modified_BGR_full_resolution = np.zeros((h,w, 3), np.uint8)
+
         for y_px, r in enumerate(self.image_np_modified_unexpanded):
             for x_px, c in enumerate(r):
                 start_x = int(x_px * tile_size_x)
@@ -527,12 +549,86 @@ class Win():
                 end_x = int(start_x + tile_size_x)
                 end_y = int(start_y + tile_size_y)
 
+                # full_start_x = int(x_px * full_tile_size_x)
+                # full_start_y = int(y_px * full_tile_size_y)
+                # full_end_x = int(full_start_x + full_tile_size_x)
+                # full_end_y = int(full_start_y + full_tile_size_y)
+
                 selected_colour = self.image_to_save[y_px, x_px]
                 # print("selected palette colour: ", selected_colour)
                 palette_selection = random.choice(texture_list[selected_colour])
+                # full_palette_selection = random.choice(original_texture_list[selected_colour])
+
                 self.image_np_modified_BGR[0][start_y:end_y, start_x:end_x] = palette_selection[:,:,2]
                 self.image_np_modified_BGR[1][start_y:end_y, start_x:end_x] = palette_selection[:,:,1]
                 self.image_np_modified_BGR[2][start_y:end_y, start_x:end_x] = palette_selection[:,:,0]
+
+                # self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 2] = full_palette_selection[:,:,2]
+                # self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 1] = full_palette_selection[:,:,1]
+                # self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 0] = full_palette_selection[:,:,0]
+
+        # cv2.imwrite("c:/users/v_sam/desktop/test_Image.jpg", self.image_np_modified_BGR_full_resolution)
+
+
+    def dump_map_real_textures(self):
+
+        scale_size = self.image_np_modified.shape
+        tile_size_x = 1.0 * scale_size[1] / int(self.x_px.value_val.get())
+        tile_size_y = 1.0 * scale_size[0] / int(self.y_px.value_val.get())
+
+        resized_texture_list_row = []
+        for r in self.texture_list:
+            resized_texture_list_col = []
+            for c in r:
+                resized_entry = cv2.resize(c, (int(tile_size_x), int(tile_size_y)), interpolation=cv2.INTER_NEAREST)
+                resized_texture_list_col.append(resized_entry)
+            resized_texture_list_row.append(resized_texture_list_col)
+        texture_list = resized_texture_list_row
+
+        resized_texture_list_row = []
+        for r in self.texture_list:
+            resized_texture_list_col = []
+            for c in r:
+                resized_entry = cv2.resize(c, (100,100), interpolation=cv2.INTER_NEAREST)
+                resized_texture_list_col.append(resized_entry)
+            resized_texture_list_row.append(resized_texture_list_col)
+        original_texture_list = resized_texture_list_row
+
+
+        full_tile_size_x = np.size(original_texture_list[0][0],1)
+        full_tile_size_y = np.size(original_texture_list[0][0],0)
+
+        h=int(int(self.y_px.value_val.get()) * full_tile_size_y)
+        w=int(int(self.x_px.value_val.get()) * full_tile_size_x)
+
+        self.image_np_modified_BGR_full_resolution = np.zeros((h,w, 3), np.uint8)
+
+        for y_px, r in enumerate(self.image_np_modified_unexpanded):
+            for x_px, c in enumerate(r):
+                start_x = int(x_px * tile_size_x)
+                start_y = int(y_px * tile_size_y)
+                end_x = int(start_x + tile_size_x)
+                end_y = int(start_y + tile_size_y)
+
+                full_start_x = int(x_px * full_tile_size_x)
+                full_start_y = int(y_px * full_tile_size_y)
+                full_end_x = int(full_start_x + full_tile_size_x)
+                full_end_y = int(full_start_y + full_tile_size_y)
+
+                selected_colour = self.image_to_save[y_px, x_px]
+                # print("selected palette colour: ", selected_colour)
+                palette_selection = random.choice(texture_list[selected_colour])
+                full_palette_selection = random.choice(original_texture_list[selected_colour])
+
+                self.image_np_modified_BGR[0][start_y:end_y, start_x:end_x] = palette_selection[:,:,2]
+                self.image_np_modified_BGR[1][start_y:end_y, start_x:end_x] = palette_selection[:,:,1]
+                self.image_np_modified_BGR[2][start_y:end_y, start_x:end_x] = palette_selection[:,:,0]
+
+                self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 2] = full_palette_selection[:,:,2]
+                self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 1] = full_palette_selection[:,:,1]
+                self.image_np_modified_BGR_full_resolution[full_start_y:full_end_y, full_start_x:full_end_x, 0] = full_palette_selection[:,:,0]
+
+        cv2.imwrite(self.path_to_dump+"hi_res_image.jpg", self.image_np_modified_BGR_full_resolution)
 
     def update_all(self):
         print('entering update all loop')
